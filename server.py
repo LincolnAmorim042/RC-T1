@@ -1,4 +1,3 @@
-# first of all import the socket library
 from curses.ascii import isspace
 import socket            
 import urllib3
