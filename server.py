@@ -32,14 +32,18 @@ def controlt(c):
         url1 += url[i]
         i+=1
       i=0
-      #s.connect((url1, 443))
-      #request = b'GET', url1, 'HTTP/1.1\n\n'
-      #c.send(request)
       
-      url1 = "https://" + url1
       http = urllib3.PoolManager(ca_certs=certifi.where())
       resp = http.request('GET', url1)
-      c.send(resp.data)
+      val = str(resp.status)
+      c.send(val.encode())
+      print(resp.status)
+      #url1 = "https://" + url1
+      #s.connect((url1, 443))
+      request = 'GET ' + url1 + ' HTTP/1.1\n\n'
+      c.send(request.encode())
+      print(request)
+      
     case "GET":
       http = urllib3.PoolManager()
       resp = http.request(method, url)
