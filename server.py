@@ -22,28 +22,14 @@ def controlt(c):
   while not(site[i].isspace()):
     url += site[i]
     i+=1
+  version = site[-1]
 
   #trata o request
   match method:
     case "CONNECT":
-      url1 = ""
-      i=0
-      while not(url[i]==':'):
-        url1 += url[i]
-        i+=1
-      i=0
-      
-      http = urllib3.PoolManager(ca_certs=certifi.where())
-      resp = http.request('GET', url1)
-      val = str(resp.status)
-      c.send(val.encode())
-      print(resp.status)
-      #url1 = "https://" + url1
-      #s.connect((url1, 443))
-      request = 'GET ' + url1 + ' HTTP/1.1\n\n'
-      c.send(request.encode())
-      print(request)
-      
+      http = urllib3.PoolManager()
+      resp = http.request("GET", url)
+      c.send(resp.data)
     case "GET":
       http = urllib3.PoolManager()
       resp = http.request(method, url)
@@ -51,7 +37,8 @@ def controlt(c):
     case "HEAD":
       http = urllib3.PoolManager()
       resp = http.request(method, url)
-      c.send(resp.headers)
+      val = str(resp.headers)
+      c.send(val.encode())
     case "POST":
       http = urllib3.PoolManager(ca_certs=certifi.where())
       resp = http.request(method, url, fields={'example': 'post'})
@@ -69,6 +56,7 @@ def controlt(c):
   c.close()
 
 ######################main###########################
+urllib3.HTTPResponse.version = 10
 # cria o socket
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)        
 print ("Socket successfully created")
