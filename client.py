@@ -2,6 +2,8 @@
 import socket           
 import sys
 
+BUFLEN=8192
+
 # Create a socket object
 s = socket.socket()        
  
@@ -12,12 +14,12 @@ port = int(sys.argv[1])
 s.connect(('127.0.0.1', port))
 
 # send the url to access and receive the message
-url = input("Qual url a acessar? ")
+url = input("Request: ")
 s.send(url.encode())
 
 # receive data from the server and decoding to get the string.
-print (s.recv(1024).decode('utf-8'))
+print (s.recv(BUFLEN).decode('utf-8'))
 
-print (s.recv(1024).decode())
+print (s.recv(BUFLEN).decode())
 # close the connection
 s.close()  
