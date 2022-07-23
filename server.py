@@ -12,64 +12,44 @@ def controlt(c):
   req = ""
   req = c.recv(BUFLEN).decode()
   print (addr, 'requesting:\n', req)
-  method = ""
-  url = ""
 
-  i=0
-  while i<len(req) and not(req[i].isspace()):
-    method += req[i]
-    if i<len(req):
-      i+=1
-  i+=1
-  while i<len(req) and not(req[i].isspace()):
-    url += req[i]
-    if i<len(req):
-      i+=1
-  i+=1
-  if url=="":
+  reqsplit = req.split()
+
+  if len(reqsplit)==1:
     c.send(b'Incomplete Request')
     c.close()
     exit()
 
   if not(req.find("1.1")==-1) and req.find("ADMIN")==-1:
-    method = "GET"
+    reqsplit[0] = "GET"
   if not(req.find("ADMIN")==-1):
-    url = url.upper()
-    req = req.upper()
+    reqsplit[1] = reqsplit[1].upper()
   #trata o request
-  match method:
+  match reqsplit[0]:
     case "GET":
       http = urllib3.PoolManager()
-      resp = http.request(method, url)
+      resp = http.request(reqsplit[0], reqsplit[1])
       c.send(resp.data)
     case "HEAD":
       http = urllib3.PoolManager()
-      resp = http.request(method, url)
+      resp = http.request(reqsplit[0], reqsplit[1])
       val = str(resp.headers)
       c.send(val.encode())
     #case "POST":
-      #http = urllib3.PoolManager(ca_certs=certifi.where())
-      #resp = http.request(method, url, fields={'example': 'post'})
+      #http = urllib3.PoolManager()
+      #resp = http.request(reqsplit[0], reqsplit[1], fields={reqsplit[2]: reqsplit[3]})
       #c.send(resp.data) 
     #case "ADMIN":
-      #match url:
+      #match reqsplit[1]:
         #case "FLUSH":
           #limpa cache
         #case "DELETE":
-          #nome = ""
-          #while i<len(req) and not(req[i].isspace()):
-            #nome += req[i]
-            #i+=1
           #apaga esta caceta
         #case "INFO":
-          #if not(req.find("INFO 0")==-1):
-            #tamanho atual e lista de objetos do cache
+          #if reqsplit[2] == "0"):
+            #salva tamanho atual e lista de objetos do cache
         #case "MUDAR":
-          #newsize = ""
-          #while i<len(req) and not(req[i].isspace()):
-            #newsize += req[i]
-            #i+=1
-          #tamanho cache = int(newsize)
+          #tamanho cache = int(reqsplit[2])
     case other:
       c.send(b'Error 501 Not Implemented!')
   i=0
