@@ -44,7 +44,7 @@ def controlt(c):
         #case "FLUSH":
           #limpa cache
         #case "DELETE":
-          #apaga esta caceta
+          #apaga reqsplit[2]
         #case "INFO":
           #if reqsplit[2] == "0"):
             #salva tamanho atual e lista de objetos do cache
