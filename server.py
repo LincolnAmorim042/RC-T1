@@ -20,9 +20,9 @@ def controlt(c):
     c.close()
     exit()
 
-  if not(req.find("1.1")==-1) and req.find("ADMIN")==-1:
+  if "HTTP/1.1" in reqsplit and not("ADMIN" in reqsplit):
     reqsplit[0] = "GET"
-  if not(req.find("ADMIN")==-1):
+  if "ADMIN" in reqsplit:
     reqsplit[1] = reqsplit[1].upper()
   #trata o request
   match reqsplit[0]:
