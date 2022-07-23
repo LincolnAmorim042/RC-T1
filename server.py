@@ -3,6 +3,7 @@ import socket
 import urllib3
 import sys
 import _thread
+import argparse
 
 BUFLEN=8192
 
@@ -58,7 +59,15 @@ def controlt(c):
 
 ######################main###########################
 # cria o socket
-port = int(sys.argv[1])
+parser = argparse.ArgumentParser(prog='python3',usage='%(prog)s path [options]')
+parser.add_argument('-c', type=int, help="tamanho do cache em kb")
+parser.add_argument('-p', type=int, help="numero do port", required=True)
+parser.add_argument('-l', type=str, help="nome do arquivo de log")
+parser.add_argument('-a', type=str, help="nome do arquivo do algoritmo")
+
+argv = parser.parse_args()
+
+port = argv.p
 
 s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)       
