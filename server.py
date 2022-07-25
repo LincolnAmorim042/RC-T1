@@ -4,6 +4,9 @@ import urllib3
 import sys
 import _thread
 import argparse
+import logging
+import logging.handlers
+
 
 BUFLEN=8192
 
@@ -69,6 +72,17 @@ argv = parser.parse_args()
 
 port = argv.p
 
+if not(argv.c==None):
+  tamcache = argv.c
+  print("Tamanho do cache definido como ", tamcache)
+  if not(argv.l==None):
+    nomelog = argv.l
+  else:
+    nomelog = "log.o"
+  logger = logging.getLogger('cache')
+  handler = logging.handlers.RotatingFileHandler(nomelog, maxBytes=tamcache*1024, mode='w+')
+  logger.addHandler(handler)
+  
 # cria o socket
 s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)       
@@ -77,10 +91,11 @@ try:
 except socket.error:
   print("Erro no bind da porta: ", port)
   sys.exit(-1)
- 
-# coloca o socket em listen
+print ("Port definido como: ", port)
+
+#  coloca o socket em listen
 s.listen(1)    
-print ("socket is listening")           
+print ("Socket is listening")           
 
 # loop
 while True:
