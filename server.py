@@ -1,4 +1,5 @@
 from curses.ascii import isspace
+from functools import cache
 import socket
 import urllib3
 import sys
@@ -30,25 +31,29 @@ def controlt(c):
     reqsp[1] = reqsp[1].upper()
   
   #trata o request
+  #if req in arquivocache and not("ADMIN" in reqsp):
+    #manda o cache
+  #else:
   match reqsp[0]:
     case "GET":
       http = urllib3.PoolManager()
       resp = http.request(reqsp[0], reqsp[1])
       c.send(resp.data)
+      #salva no cache
     case "HEAD":
       http = urllib3.PoolManager()
       resp = http.request(reqsp[0], reqsp[1])
       val = str(resp.headers)
       c.send(val.encode())
+      #salva no cache
     #case "POST":
       #http = urllib3.PoolManager()
       #resp = http.request(reqsp[0], reqsp[1], fields={reqsp[2]: reqsp[3]})
       #c.send(resp.data) 
-    case "ADMIN":
-      match reqsp[1]:
-        case "FLUSH":
-          handler = logging.handlers.RotatingFileHandler(nomelog, maxBytes=tamcache*1024, mode='w+')
-          logger.addHandler(handler)
+    #case "ADMIN":
+      #match reqsp[1]:
+        #case "FLUSH":
+          #só abrir o arquivo dnv
         #case "DELETE":
           #apaga reqsp[2]
         #case "INFO":
@@ -67,7 +72,7 @@ parser = argparse.ArgumentParser(prog='python3',usage='%(prog)s path [options]')
 parser.add_argument('-c', type=int, help="tamanho do cache em kb")
 parser.add_argument('-p', type=int, help="numero do port", required=True)
 parser.add_argument('-l', type=str, help="nome do arquivo de log")
-parser.add_argument('-a', type=str, help="nome do arquivo do algoritmo")
+#parser.add_argument('-a', type=str, help="nome do arquivo do algoritmo")
 
 argv = parser.parse_args()
 
@@ -80,8 +85,8 @@ if not(argv.c==None):
     nomelog = argv.l
   else:
     nomelog = "log.o"
-  logger = logging.getLogger('cache')
-  handler = logging.handlers.RotatingFileHandler(nomelog, maxBytes=tamcache*1024, mode='w+')
+  logger = logging.getLogger('log')
+  handler = logging.handlers.RotatingFileHandler(nomelog, mode='w+')
   logger.addHandler(handler)
   
 # cria o socket
