@@ -44,10 +44,11 @@ def controlt(c):
       #http = urllib3.PoolManager()
       #resp = http.request(reqsp[0], reqsp[1], fields={reqsp[2]: reqsp[3]})
       #c.send(resp.data) 
-    #case "ADMIN":
-      #match reqsp[1]:
-        #case "FLUSH":
-          #limpa cache
+    case "ADMIN":
+      match reqsp[1]:
+        case "FLUSH":
+          handler = logging.handlers.RotatingFileHandler(nomelog, maxBytes=tamcache*1024, mode='w+')
+          logger.addHandler(handler)
         #case "DELETE":
           #apaga reqsp[2]
         #case "INFO":
