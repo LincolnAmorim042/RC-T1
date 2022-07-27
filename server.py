@@ -11,8 +11,11 @@ import logging.handlers
 
 BUFLEN=8192
 
+
+
 #controle das threads
 def controlt(c):
+  global caching, tamcache
   # recebe o request
   req = ""
   req = c.recv(BUFLEN).decode()
@@ -31,7 +34,7 @@ def controlt(c):
     reqsp[1] = reqsp[1].upper()
   
   #trata o request
-  if req in caching and not("ADMIN" in reqsp):
+  if not("ADMIN" in reqsp) and req in caching:
     #acha a resposta pro request no arquivo
     c.send(caching.line[1]) 
   else:
