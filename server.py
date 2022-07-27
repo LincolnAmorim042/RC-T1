@@ -1,4 +1,3 @@
-from curses.ascii import isspace
 from fileinput import close
 import socket
 import urllib3
