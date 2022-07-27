@@ -9,7 +9,7 @@ import logging.handlers
 
 BUFLEN=8192
 
-#controle das threads
+# controle das threads
 def controlt(c):
   global caching, tamcache, numhits, numfails
   # recebe o request
@@ -28,7 +28,7 @@ def controlt(c):
   if "ADMIN" in reqsp:
     reqsp[1] = reqsp[1].upper()
 
-  #trata o request
+  # trata o request
   if not("ADMIN" in reqsp) and req in caching:
     #acha a resposta pro request no arquivo
     numhits+=1
@@ -135,6 +135,7 @@ numfails=0
 while True:
 # abre a conexao com o cliente
   c, addr = s.accept()
-  print ('Got connection from', addr)
+  msg='Got connection from '+ str(addr)
+  logging.info(msg)
   numpedidos+=1
   _thread.start_new_thread(controlt,(c,))
