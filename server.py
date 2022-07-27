@@ -13,10 +13,9 @@ BUFLEN=8192
 def controlt(c):
   global caching, tamcache
   # recebe o request
+  msg = ""
   req = ""
   req = c.recv(BUFLEN).decode()
-  print (addr, 'requesting:\n', req)
-
   reqsp = req.split()
 
   if len(reqsp)==1:
@@ -28,7 +27,7 @@ def controlt(c):
     reqsp[0] = "GET"
   if "ADMIN" in reqsp:
     reqsp[1] = reqsp[1].upper()
-  
+
   #trata o request
   if not("ADMIN" in reqsp) and req in caching:
     #acha a resposta pro request no arquivo
@@ -36,12 +35,16 @@ def controlt(c):
   else:
     match reqsp[0]:
       case "GET":
+        msg = str(_thread.get_native_id())+"\tADD\t"+reqsp[1]
+        logging.info(msg)
         http = urllib3.PoolManager()
         resp = http.request(reqsp[0], reqsp[1])
         c.send(resp.data)
         #if caching.sizeof()<tamcache:
           #salva no cache
       case "HEAD":
+        msg = str(_thread.get_native_id())+"\tADD\t"+reqsp[1]
+        logging.info(msg)
         http = urllib3.PoolManager()
         resp = http.request(reqsp[0], reqsp[1])
         head = str(resp.headers)
@@ -51,6 +54,8 @@ def controlt(c):
       case "ADMIN":
         match reqsp[1]:
           case "FLUSH":
+            msg = str(_thread.get_native_id())+"\tEVICT\tDelete Requested"
+            logging.info(msg)
             caching = close()
             caching = open("cache.txt", "w+")
           #case "DELETE":
@@ -59,6 +64,8 @@ def controlt(c):
             #if reqsp[2] == "0": # salva tamanho atual e lista de objetos do cache
             #if reqsp[2] == "1": # salva os não-expirados
           case "MUDAR":
+            msg = str(_thread.get_native_id())+"\tCHSIZE\told: "+tamcache/1024+"\tnew: "+reqsp[2]
+            logging.info(msg)
             tamcache = int(reqsp[2])*1024
       case other:
         c.send(b'Error 501 Not Implemented!')
@@ -78,14 +85,12 @@ port = argv.p
 
 if not(argv.c==None):
   tamcache = argv.c*1024
-  print("Tamanho do cache definido como: ", tamcache)
+  print("Tamanho do cache definido como:", tamcache)
 if not(argv.l==None):
     nomelog = argv.l
 else:
-    nomelog = "log.o"
-logger = logging.getLogger('log')
-handler = logging.handlers.RotatingFileHandler(nomelog, mode='w+')
-logger.addHandler(handler)
+    nomelog = "log.txt"
+logging.basicConfig(level=logging.INFO,format="%(message)s",handlers=[logging.FileHandler(nomelog, mode="w"),logging.StreamHandler()])
 
 caching = open("cache.txt", "w+")
 
@@ -95,9 +100,9 @@ s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 try:
   s.bind(('', port, 0, 0))
 except socket.error:
-  print("Erro no bind da porta: ", port)
+  print("Erro no bind da porta:", port)
   sys.exit(-1)
-print ("Port definido como: ", port)
+print ("Port definido como:", port)
 
 # coloca o socket em listen
 s.listen(1)    
