@@ -1,6 +1,5 @@
 from curses.ascii import isspace
 from fileinput import close
-from functools import cache
 import socket
 import urllib3
 import sys
@@ -10,8 +9,6 @@ import logging
 import logging.handlers
 
 BUFLEN=8192
-
-
 
 #controle das threads
 def controlt(c):
@@ -52,10 +49,6 @@ def controlt(c):
         c.send(head.encode())
         #if caching.sizeof()<tamcache:
           #salva no cache
-      #case "POST":
-        #http = urllib3.PoolManager()
-        #resp = http.request(reqsp[0], reqsp[1], fields={reqsp[2]: reqsp[3]})
-        #c.send(resp.data) 
       case "ADMIN":
         match reqsp[1]:
           case "FLUSH":
@@ -79,7 +72,6 @@ parser = argparse.ArgumentParser(prog='python3',usage='%(prog)s path [options]')
 parser.add_argument('-c', type=int, help="tamanho do cache em kb")
 parser.add_argument('-p', type=int, help="numero do port", required=True)
 parser.add_argument('-l', type=str, help="nome do arquivo de log")
-#parser.add_argument('-a', type=str, help="nome do arquivo do algoritmo")
 
 argv = parser.parse_args()
 
@@ -97,6 +89,7 @@ handler = logging.handlers.RotatingFileHandler(nomelog, mode='w+')
 logger.addHandler(handler)
 
 caching = open("cache.txt", "w+")
+
 # cria o socket
 s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)       
