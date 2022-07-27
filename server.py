@@ -11,7 +11,7 @@ BUFLEN=8192
 
 #controle das threads
 def controlt(c):
-  global caching, tamcache
+  global caching, tamcache, numhits, numfails
   # recebe o request
   msg = ""
   req = ""
@@ -31,10 +31,14 @@ def controlt(c):
   #trata o request
   if not("ADMIN" in reqsp) and req in caching:
     #acha a resposta pro request no arquivo
+    numhits+=1
+    msg = str(_thread.get_native_id())+"\tHIT\t"+reqsp[1]
+    logging.info(msg)
     c.send(caching.line[1]) 
   else:
     match reqsp[0]:
       case "GET":
+        numfails+=1
         msg = str(_thread.get_native_id())+"\tADD\t"+reqsp[1]
         logging.info(msg)
         http = urllib3.PoolManager()
@@ -43,7 +47,7 @@ def controlt(c):
         #if caching.sizeof()<tamcache:
           #salva no cache
       case "HEAD":
-        msg = str(_thread.get_native_id())+"\tADD\t"+reqsp[1]
+        msg = str(_thread.get_native_id())+"\tADD\t"+reqsp[1]+" headers"
         logging.info(msg)
         http = urllib3.PoolManager()
         resp = http.request(reqsp[0], reqsp[1])
@@ -54,17 +58,31 @@ def controlt(c):
       case "ADMIN":
         match reqsp[1]:
           case "FLUSH":
-            msg = str(_thread.get_native_id())+"\tEVICT\tDelete Requested"
+            msg = str(_thread.get_native_id())+"\tFLUSH\tRequested"
             logging.info(msg)
             caching = close()
             caching = open("cache.txt", "w+")
           #case "DELETE":
             #apaga reqsp[2]
-          #case "INFO":
-            #if reqsp[2] == "0": # salva tamanho atual e lista de objetos do cache
-            #if reqsp[2] == "1": # salva os não-expirados
-          case "MUDAR":
-            msg = str(_thread.get_native_id())+"\tCHSIZE\told: "+tamcache/1024+"\tnew: "+reqsp[2]
+          case "INFO":
+            match reqsp[2]:
+              case "0": # salva tamanho atual e lista de objetos do cache
+                msg = str(_thread.get_native_id())+"\tDUMP\tDump Start"
+                logging.info(msg)
+                msg = str(_thread.get_native_id())+"\tDUMP\tSize "+str(tamcache/1024)
+                logging.info(msg)
+              #case "1": # salva os não-expirados
+              case "2":
+                msg = str(_thread.get_native_id())+"\tNúmero Total de Pedidos:\t"+str(numpedidos)
+                logging.info(msg)
+                msg = str(_thread.get_native_id())+"\tNúmero Total de Hits:\t"+str(numhits)
+                logging.info(msg)
+                msg = str(_thread.get_native_id())+"\tNúmero Total de Fails:\t"+str(numfails)
+                logging.info(msg)
+                msg = str(_thread.get_native_id())+"\tTamanho Médio das Páginas em Cache:\t"+str(numfails/tamcache)
+                logging.info(msg)
+          case "CHANGE":
+            msg = str(_thread.get_native_id())+"\tCHSIZE\told: "+str(tamcache/1024)+"\tnew: "+reqsp[2]
             logging.info(msg)
             tamcache = int(reqsp[2])*1024
       case other:
@@ -85,6 +103,9 @@ port = argv.p
 
 if not(argv.c==None):
   tamcache = argv.c*1024
+  print("Tamanho do cache definido como:", tamcache)
+else: 
+  tamcache = 1000*1024
   print("Tamanho do cache definido como:", tamcache)
 if not(argv.l==None):
     nomelog = argv.l
@@ -107,11 +128,13 @@ print ("Port definido como:", port)
 # coloca o socket em listen
 s.listen(1)    
 print ("Socket is listening")           
-
+numpedidos=0
+numhits=0
+numfails=0
 # loop
 while True:
 # abre a conexao com o cliente
   c, addr = s.accept()
   print ('Got connection from', addr)
-
+  numpedidos+=1
   _thread.start_new_thread(controlt,(c,))
