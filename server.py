@@ -14,6 +14,7 @@ class LRUCache(object):
     self.cache = {}
     self.lru = {}
     self.tm = 0
+  
   def get(self,key):  # se o dado existir no cache,retorna ele,se nao,retorna -1
     if key in self.cache:
       self.lru[key] = self.tm # variavel contadora de requisiçoes de dados vai somar 1
@@ -21,15 +22,47 @@ class LRUCache(object):
       return self.cache[key]
     else:
       return -1
+  
   def set(self,key,value): # garantir que n vai atingir a capacidade maxima definida
-    if len(self.cache) > self.tam:  # se tiver cheio o cache,vai remover o mais antigo
-      old_key = min(self.lru.keys(), key = lambda k: self.lru[k])
-      self.cache.pop(old_key)  # remove o mais antigo do cache
-      self.lru.pop(old_key)  # remove do LRU
+    sizebytes = 0
+    for c in self.cache:
+      sizebytes += sys.getsizeof(self.cache[c])
+    if (sizebytes + sys.getsizeof(value)) > self.tam:  # se tiver cheio o cache,vai remover o mais antigo
+      if sys.getsizeof(value) > self.tam:
+        msg =str(_thread.get_native_id())+"\tEVICT\t"+key+"\tCACHE FULL"
+        logging.info(msg)
+      else:
+        msg =str(_thread.get_native_id())+"\tEVICT\t"+key+"\tCACHE FULL"
+        logging.info(msg) #escreve a variavel no loggging
+        old_key = min(self.lru.keys(), key=lambda k: self.lru[k])
+        # removendo
+        msg = str(_thread.get_native_id())+"\tEVICT\t"+old_key+"\tEXPIRED" #algo foi expulso do cache 
+        logging.info(msg)
+        self.cache.pop(old_key)
+        self.lru.pop(old_key)  # remove do LRU
+        self.cache[key] = value
+        self.lru[key] = self.tm
+        self.tm = self.tm + 1
     else:
+        # Salvo no Cache
       self.cache[key] = value
       self.lru[key] = self.tm
       self.tm = self.tm + 1
+  
+  def clean(self):
+    self.cache = {}
+    self.lru = {}
+    self.tm = 0
+  
+  def delete(self,key):
+    self.cache.pop(key)
+    self.lru.pop(key)
+
+  def dump(self):
+    for c in self.cache:
+      sizebytes = sys.getsizeof(self.cache[c])
+      msg =str(_thread.get_native_id())+"\tDUMP\tfileid1\t"+str(sizebytes/1024)+"\t"+c
+      logging.info(msg)
 
 
 def testcache(met,url):
@@ -53,9 +86,10 @@ def testcache(met,url):
     logging.info(msg)
     return verifica
 
+
 # controle das threads
 def controlt(c):
-  global caching, tamcache, numhits, numfails
+  global caching, numpedidos
   # recebe o request
   msg = ""
   req = ""
@@ -72,6 +106,7 @@ def controlt(c):
   if "ADMIN" in reqsplit:
     reqsplit[1] = reqsplit[1].upper()
 
+  numpedidos+=1
   # trata o request 
   match reqsplit[0]:
     case "GET":
@@ -81,17 +116,39 @@ def controlt(c):
         case "FLUSH":
           msg = str(_thread.get_native_id())+"\tFLUSH\tRequested"
           logging.info(msg)
-            
-        #case "DELETE": #TODO
-          #apaga reqsplit[2] do cache
+          caching.clean()
+          c.send(b'200 OK')
+        case "DELETE":
+          try:
+            caching.delete(reqsplit[2])
+          except:
+            c.send(b'404 Not Found')
+            c.close()
+            exit()
+          c.send(b'200 HTTP OK')
         case "INFO":
+          sizebytes = 0
+          for i in caching.cache:
+            sizebytes += sys.getsizeof(caching.cache[i])
           match reqsplit[2]: #TODO
             case "0": # salva tamanho atual e lista de objetos do cache
               msg = str(_thread.get_native_id())+"\tDUMP\tDump Start"
               logging.info(msg)
-              msg = str(_thread.get_native_id())+"\tDUMP\tSize "+str(tamcache/1024)
+              msg = str(_thread.get_native_id())+"\tDUMP\tSize "+str(sizebytes/1024)
               logging.info(msg)
-            #case "1": # salva os não-expirados
+              caching.dump()
+              msg = str(_thread.get_native_id())+"\tDUMP\tDump End"
+              logging.info(msg)
+              c.send(b'200 HTTP OK')
+            case "1": # salva os não-expirados (igual o 0)
+              msg = str(_thread.get_native_id())+"\tDUMP\tDump Start"
+              logging.info(msg)
+              msg = str(_thread.get_native_id())+"\tDUMP\tSize "+str(sizebytes/1024)
+              logging.info(msg)
+              caching.dump()
+              msg = str(_thread.get_native_id())+"\tDUMP\tDump End"
+              logging.info(msg)
+              c.send(b'200 HTTP OK')
             case "2":
               msg = str(_thread.get_native_id())+"\tNúmero Total de Pedidos:\t"+str(numpedidos)
               logging.info(msg)
@@ -99,12 +156,17 @@ def controlt(c):
               logging.info(msg)
               msg = str(_thread.get_native_id())+"\tNúmero Total de Fails:\t"+str(numfails)
               logging.info(msg)
-              msg = str(_thread.get_native_id())+"\tTamanho Médio das Páginas em Cache:\t"+str(numfails/tamcache)
+              msg = str(_thread.get_native_id())+"\tTamanho Médio das Páginas em Cache:\t"+str((sizebytes/numfails)/1024)
               logging.info(msg)
+              c.send(b'200 HTTP OK')
+            case other:
+              c.send(b'Error 501 Not Implemented!')
         case "CHANGE":
-          msg = str(_thread.get_native_id())+"\tCHSIZE\told: "+str(tamcache/1024)+"\tnew: "+reqsplit[2]
+          msg = str(_thread.get_native_id())+"\tCHSIZE\told: "+str(caching.tam/1024)+"\tnew: "+reqsplit[2]
           logging.info(msg)
           caching.tam=int(reqsplit[2])*1024
+        case other:
+          c.send(b'Error 501 Not Implemented!')
     case other:
       c.send(b'Error 501 Not Implemented!')
   i=0
@@ -125,7 +187,7 @@ if not(argv.c==None):
   tamcache = argv.c*1024
   print("Tamanho do cache definido como:", tamcache)
 else: 
-  tamcache = 1000*1024
+  tamcache = 500*1024
   print("Tamanho do cache definido como:", tamcache)
 if not(argv.l==None):
     nomelog = argv.l
@@ -133,7 +195,6 @@ else:
     nomelog = "log.txt"
 logging.basicConfig(level=logging.INFO,format="%(message)s",handlers=[logging.FileHandler(nomelog, mode="w"),logging.StreamHandler()])
 
-# caching = open("cache.txt", "w+")
 caching = LRUCache(tam=tamcache)
 
 # cria o socket
@@ -158,5 +219,4 @@ while True:
   c, addr = s.accept()
   msg='Got connection from '+ str(addr)
   logging.info(msg)
-  numpedidos+=1
   _thread.start_new_thread(controlt,(c,))
