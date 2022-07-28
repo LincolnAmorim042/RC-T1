@@ -9,6 +9,59 @@ import logging.handlers
 
 BUFLEN=8192
 
+class LRUCache(object):
+    def __init__(self,capacity):
+        self.capacity = capacity
+        self.cache = {}
+        self.lru = {}
+        self.tm = 0
+
+    def get(self,key):  #se o dado existir no cache,retorna ele,se nao,retorna -1
+        print("Pegando dados do cache")
+
+        if key in self.cache: #se a chave existe no cache
+            self.lru[key] = self.tm #variavel contadora de requisiçoes de dados vai somar 1
+            self.tm = self.tm +1
+            print("Cached")
+            return self.cache[key]
+        else:
+            return -1 #dado nao ta no cache
+
+    def set(self,key,value): #garantir que n vai atingir a capacidade maxima definida
+        if len(self.cache) > self.capacity:  # se tiver cheio o cache,vai remover o mais antigo
+            old_key = min(self.lru.keys(), key = lambda k: self.lru[k])
+
+            # removendo
+            self.cache.pop(old_key)  # remove o mais antigo do cache
+            self.lru.pop(old_key)  # remove do LRU
+        else:
+            self.cache[key] = value
+            self.lru[key] = self.tm
+            self.tm = self.tm + 1
+
+        print("LRU:{}".format(self.lru))
+        print("Cache:{}".format(self.cache))
+
+
+def Func(url, str1):
+    sitehttp = url
+    http = urllib3.PoolManager()
+    response = http.request(str1, sitehttp)
+    responsepronto = response.data
+    verifica = caching.get(sitehttp)
+
+    if(verifica == -1):
+        result = responsepronto
+        verifica = caching.set(sitehttp,result)
+
+        print("Computando")
+        #time.sleep(3)
+        return result
+    else:
+        return verifica
+
+
+
 # controle das threads
 def controlt(c):
   global caching, tamcache, numhits, numfails
@@ -29,21 +82,22 @@ def controlt(c):
     reqsp[1] = reqsp[1].upper()
 
   # trata o request
-  if not("ADMIN" in reqsp) and req in caching:
+  if ("ADMIN" in reqsp):
     #acha a resposta pro request no arquivo
     numhits+=1
     msg = str(_thread.get_native_id())+"\tHIT\t"+reqsp[1]
     logging.info(msg)
-    c.send(caching.line[1]) 
+    # c.send(caching.line[1]) 
   else:
     match reqsp[0]:
       case "GET":
         numfails+=1
         msg = str(_thread.get_native_id())+"\tADD\t"+reqsp[1]
         logging.info(msg)
-        http = urllib3.PoolManager()
-        resp = http.request(reqsp[0], reqsp[1])
-        c.send(resp.data)
+        # http = urllib3.PoolManager()
+        # resp = http.request(reqsp[0], reqsp[1])
+        # c.send(resp.data)
+        c.send(Func(reqsp[1],reqsp[0]))
         #if caching.sizeof()<tamcache:
           #salva no cache
       case "HEAD":
@@ -113,7 +167,8 @@ else:
     nomelog = "log.txt"
 logging.basicConfig(level=logging.INFO,format="%(message)s",handlers=[logging.FileHandler(nomelog, mode="w"),logging.StreamHandler()])
 
-caching = open("cache.txt", "w+")
+# caching = open("cache.txt", "w+")
+caching = LRUCache(capacity=tamcache)
 
 # cria o socket
 s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
