@@ -1,4 +1,3 @@
-from fileinput import close
 import socket
 import urllib3
 import sys
