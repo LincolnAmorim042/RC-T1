@@ -14,46 +14,44 @@ class LRUCache(object):
     self.cache = {}
     self.lru = {}
     self.tm = 0
-  
-  def get(self,key):  # se o dado existir no cache,retorna ele,se nao,retorna -1
+
+  def get(self,key):  
     if key in self.cache:
-      self.lru[key] = self.tm # variavel contadora de requisiçoes de dados vai somar 1
+      self.lru[key] = self.tm 
       self.tm = self.tm +1
       return self.cache[key]
     else:
       return -1
-  
-  def set(self,key,value): # garantir que n vai atingir a capacidade maxima definida
+
+  def set(self,key,value): 
     sizebytes = 0
     for c in self.cache:
       sizebytes += sys.getsizeof(self.cache[c])
-    if (sizebytes + sys.getsizeof(value)) > self.tam:  # se tiver cheio o cache,vai remover o mais antigo
+    if (sizebytes + sys.getsizeof(value)) > self.tam:  
       if sys.getsizeof(value) > self.tam:
         msg =str(_thread.get_native_id())+"\tEVICT\t"+key+"\tCACHE FULL"
         logging.info(msg)
       else:
         msg =str(_thread.get_native_id())+"\tEVICT\t"+key+"\tCACHE FULL"
-        logging.info(msg) #escreve a variavel no loggging
+        logging.info(msg) 
         old_key = min(self.lru.keys(), key=lambda k: self.lru[k])
-        # removendo
-        msg = str(_thread.get_native_id())+"\tEVICT\t"+old_key+"\tEXPIRED" #algo foi expulso do cache 
+        msg = str(_thread.get_native_id())+"\tEVICT\t"+old_key+"\tEXPIRED" 
         logging.info(msg)
         self.cache.pop(old_key)
-        self.lru.pop(old_key)  # remove do LRU
+        self.lru.pop(old_key)  
         self.cache[key] = value
         self.lru[key] = self.tm
         self.tm = self.tm + 1
     else:
-        # Salvo no Cache
       self.cache[key] = value
       self.lru[key] = self.tm
       self.tm = self.tm + 1
-  
+
   def clean(self):
     self.cache = {}
     self.lru = {}
     self.tm = 0
-  
+
   def delete(self,key):
     self.cache.pop(key)
     self.lru.pop(key)
@@ -101,8 +99,14 @@ def controlt(c):
     c.close()
     exit()
 
+  reqsplit[1] = reqsplit[1].lower()
+
+  if not("http://" in reqsplit[1]):
+    reqsplit[1]="http://"+reqsplit[1]
+  
   if "HTTP/1.1" in reqsplit and not("ADMIN" in reqsplit):
     reqsplit[0] = "GET"
+  
   if "ADMIN" in reqsplit:
     reqsplit[1] = reqsplit[1].upper()
 
@@ -117,7 +121,7 @@ def controlt(c):
           msg = str(_thread.get_native_id())+"\tFLUSH\tRequested"
           logging.info(msg)
           caching.clean()
-          c.send(b'200 OK')
+          c.send(b'200 HTTP OK')
         case "DELETE":
           try:
             caching.delete(reqsplit[2])
@@ -149,7 +153,7 @@ def controlt(c):
               msg = str(_thread.get_native_id())+"\tDUMP\tDump End"
               logging.info(msg)
               c.send(b'200 HTTP OK')
-            case "2":
+            case "2": # mostra as estatísticas
               msg = str(_thread.get_native_id())+"\tNúmero Total de Pedidos:\t"+str(numpedidos)
               logging.info(msg)
               msg = str(_thread.get_native_id())+"\tNúmero Total de Hits:\t"+str(numhits)
