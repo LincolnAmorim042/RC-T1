@@ -1,4 +1,3 @@
-from re import I
 import socket
 import urllib3
 import sys
