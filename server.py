@@ -1,19 +1,21 @@
 import socket
+from requests import delete
 import urllib3
 import sys
 import _thread
 import argparse
 import logging
 import logging.handlers
+import datetime
 
 BUFLEN = 8192
-
 
 class LRUCache(object):
     def __init__(self, tam):
         self.tam = tam
         self.cache = {}
         self.lru = {}
+        self.expires = {}
         self.tm = 0
 
     def get(self, key):
@@ -40,26 +42,32 @@ class LRUCache(object):
                 logging.info(msg)
                 self.cache.pop(old_key)
                 self.lru.pop(old_key)
+                self.expires.pop(old_key)
             sizebytes = 0
             for i in self.cache:
               sizebytes += sys.getsizeof(self.cache[i])
         self.cache[key] = value
         self.lru[key] = self.tm
+        tempo = datetime.datetime.now()
+        tempo += datetime.timedelta(minutes=1)
+        self.expires[key] = tempo
         self.tm = self.tm + 1
 
     def clean(self):
         self.cache = {}
         self.lru = {}
+        self.expires = {}
         self.tm = 0
 
     def delete(self,key):
         self.cache.pop(key)
         self.lru.pop(key)
+        self.expires.pop(key)
 
     def dump(self):
         for i in self.cache:
             sizebytes = sys.getsizeof(self.cache[i])
-            msg = str(_thread.get_native_id()) + "\tDUMP\tfileid1\t"+str(sizebytes/1024)+"\t"+i
+            msg = str(_thread.get_native_id()) + "\tDUMP\tfileid1\t"+str(sizebytes/1024)+"\t"+str(self.expires[i])+"\t"+i
             logging.info(msg)
     
     def changesize(self,newsize):
@@ -70,23 +78,31 @@ class LRUCache(object):
         old_key = min(self.lru.keys(), key=lambda k: self.lru[k])
         self.cache.pop(old_key)
         self.lru.pop(old_key)
+        self.expires.pop(old_key)
         sizebytes = 0
         for i in self.cache:
           sizebytes += sys.getsizeof(self.cache[i])
       self.tam=newsize
-      
+
+    def expired(self, url):
+      timenow = datetime.datetime.now()
+      timeexpiring = self.expires[url]
+      if timenow > timeexpiring:
+        self.delete(url)
+        return testcache("GET", url)
+      else:
+        return testcache("GET", url)
+
 
 def testcache(met, url):
     global caching, tamcache, numhits, numfails
-    sitehttp = url
     http = urllib3.PoolManager()
-    response = http.request(met, sitehttp)
-    responsepronto = response.data
-    verifica = caching.get(sitehttp)
+    response = http.request(met, url)
+    test = caching.get(url)
 
-    if(verifica == -1):
-        result = responsepronto
-        verifica = caching.set(sitehttp, result)
+    if(test == -1):
+        result = response.data
+        test = caching.set(url, result)
         numfails += 1
         msg = str(_thread.get_native_id())+"\tADD\t"+url
         logging.info(msg)
@@ -95,7 +111,7 @@ def testcache(met, url):
         numhits += 1
         msg = str(_thread.get_native_id())+"\tHIT\t"+url
         logging.info(msg)
-        return verifica
+        return test
 
 
 # controle das threads
@@ -122,12 +138,14 @@ def controlt(c):
 
     if "ADMIN" in reqsplit:
         reqsplit[1] = reqsplit[1].upper()
-
     numpedidos += 1
     # trata o request
     match reqsplit[0]:
         case "GET":
-            c.send(testcache(reqsplit[0], reqsplit[1]))
+            if "if-modified-since" in reqsplit:
+              c.send(caching.expired(reqsplit[1]))
+            else:
+              c.send(testcache(reqsplit[0], reqsplit[1]))
         case "ADMIN":
             match reqsplit[1]:
                 case "FLUSH":
