@@ -49,7 +49,7 @@ class LRUCache(object):
         self.cache[key] = value
         self.lru[key] = self.tm
         tempo = datetime.datetime.now()
-        tempo += datetime.timedelta(minutes=1)
+        tempo += datetime.timedelta(days=1)
         self.expires[key] = tempo
         self.tm = self.tm + 1
 
