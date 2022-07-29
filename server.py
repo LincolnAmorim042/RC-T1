@@ -1,5 +1,4 @@
 import socket
-from requests import delete
 import urllib3
 import sys
 import _thread
