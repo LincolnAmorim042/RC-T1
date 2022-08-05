@@ -48,7 +48,7 @@ class LRUCache(object):
         self.cache[key] = value
         self.lru[key] = self.tm
         tempo = datetime.datetime.now()
-        tempo += datetime.timedelta(days=1)
+        tempo += datetime.timedelta(minutes=1)
         self.expires[key] = tempo
         self.tm = self.tm + 1
 
@@ -64,10 +64,39 @@ class LRUCache(object):
         self.expires.pop(key)
 
     def dump(self):
+        msg = str(_thread.get_native_id()) + "\tDUMP\tDump Start"
+        logging.info(msg)
+        sizebytes = 0
+        for i in self.cache:
+            sizebytes += sys.getsizeof(self.cache[i])
+        msg = str(_thread.get_native_id()) + "\tDUMP\tSize "+str(sizebytes/1024)
+        logging.info(msg)
         for i in self.cache:
             sizebytes = sys.getsizeof(self.cache[i])
             msg = str(_thread.get_native_id()) + "\tDUMP\tfileid1\t"+str(sizebytes/1024)+"\t"+str(self.expires[i])+"\t"+i
             logging.info(msg)
+        msg = str(_thread.get_native_id()) + "\tDUMP\tDump End"
+        logging.info(msg)
+        
+    def dumpnotex(self):
+        msg = str(_thread.get_native_id()) + "\tDUMP\tDump Start"
+        logging.info(msg)
+        timenow = datetime.datetime.now()
+        sizebytes = 0
+        for i in self.cache:
+            timeexpiring = self.expires[i]
+            if timenow < timeexpiring:
+                sizebytes += sys.getsizeof(self.cache[i])
+        msg = str(_thread.get_native_id()) + "\tDUMP\tSize "+str(sizebytes/1024)
+        logging.info(msg)
+        for i in self.cache:
+            timeexpiring = self.expires[i]
+            if timenow < timeexpiring:
+                sizebytes = sys.getsizeof(self.cache[i])
+                msg = str(_thread.get_native_id()) + "\tDUMP\tfileid1\t"+str(sizebytes/1024)+"\t"+str(self.expires[i])+"\t"+i
+                logging.info(msg)
+        msg = str(_thread.get_native_id()) + "\tDUMP\tDump End"
+        logging.info(msg)
     
     def changesize(self,newsize):
       sizebytes = 0
@@ -142,9 +171,15 @@ def controlt(c):
     match reqsplit[0]:
         case "GET":
             if "if-modified-since" in reqsplit:
-              c.send(caching.expired(reqsplit[1]))
+                try:
+                    c.send(caching.expired(reqsplit[1]))
+                except:
+                    c.send(b'404 Not Found')
             else:
-              c.send(testcache(reqsplit[0], reqsplit[1]))
+                try:
+                    c.send(testcache(reqsplit[0], reqsplit[1]))
+                except:
+                    c.send(b'404 Not Found')
         case "ADMIN":
             match reqsplit[1]:
                 case "FLUSH":
@@ -161,37 +196,29 @@ def controlt(c):
                         exit()
                     c.send(b'200 HTTP OK')
                 case "INFO":
-                    sizebytes = 0
-                    for i in caching.cache:
-                        sizebytes += sys.getsizeof(caching.cache[i])
                     match reqsplit[2]:  # TODO
                         case "0":  # salva tamanho atual e lista de objetos do cache
-                            msg = str(_thread.get_native_id()) + "\tDUMP\tDump Start"
-                            logging.info(msg)
-                            msg = str(_thread.get_native_id()) + "\tDUMP\tSize "+str(sizebytes/1024)
-                            logging.info(msg)
                             caching.dump()
-                            msg = str(_thread.get_native_id()) + "\tDUMP\tDump End"
-                            logging.info(msg)
                             c.send(b'200 HTTP OK')
                         case "1":  # salva os não-expirados (igual o 0)
-                            msg = str(_thread.get_native_id()) + "\tDUMP\tDump Start"
-                            logging.info(msg)
-                            msg = str(_thread.get_native_id()) + "\tDUMP\tSize "+str(sizebytes/1024)
-                            logging.info(msg)
-                            caching.dump()
-                            msg = str(_thread.get_native_id()) + "\tDUMP\tDump End"
-                            logging.info(msg)
+                            caching.dumpnotex()
                             c.send(b'200 HTTP OK')
                         case "2":  # mostra as estatísticas
+                            sizebytes = 0
+                            for i in caching.cache:
+                                sizebytes += sys.getsizeof(caching.cache[i])
                             msg = str(_thread.get_native_id()) + "\tNúmero Total de Pedidos:\t"+str(numpedidos)
                             logging.info(msg)
                             msg = str(_thread.get_native_id()) + "\tNúmero Total de Hits:\t"+str(numhits)
                             logging.info(msg)
                             msg = str(_thread.get_native_id()) + "\tNúmero Total de Fails:\t"+str(numfails)
                             logging.info(msg)
-                            msg = str(_thread.get_native_id())+"\tTamanho Médio das Páginas em Cache:\t"+str((sizebytes/numfails)/1024)
-                            logging.info(msg)
+                            try:
+                                msg = str(_thread.get_native_id())+"\tTamanho Médio das Páginas em Cache:\t"+str((sizebytes/numfails)/1024)
+                                logging.info(msg)
+                            except:
+                                msg = str(_thread.get_native_id())+"\t0 Páginas em Cache"
+                                logging.info(msg)
                             c.send(b'200 HTTP OK')
                         case other:
                             c.send(b'Error 501 Not Implemented!')
