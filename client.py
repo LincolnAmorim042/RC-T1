@@ -13,7 +13,7 @@ s = socket.socket()
 port = int(sys.argv[1])              
  
 # connect to the server on local computer
-s.connect(('127.0.0.1', port))
+s.connect(('', port))
 
 # send the url to access and receive the message
 url = input("Request: ")
