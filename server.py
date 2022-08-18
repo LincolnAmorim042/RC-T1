@@ -33,6 +33,7 @@ class LRUCache(object):
             if sys.getsizeof(value) > self.tam:
                 msg = str(_thread.get_native_id()) + "\tEVICT\t"+key+"\tCACHE FULL"
                 logging.info(msg)
+                exit(1)
             else:
                 msg = str(_thread.get_native_id()) + "\tEVICT\t"+key+"\tCACHE FULL"
                 logging.info(msg)
