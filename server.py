@@ -226,6 +226,7 @@ def controlt(c):
                     msg = str(_thread.get_native_id())+"\tCHSIZE\told: " +str(caching.tam/1024)+"\tnew: "+reqsplit[2]
                     logging.info(msg)
                     caching.changesize(int(reqsplit[2])*1024)
+                    c.send(b'200 HTTP OK')
                 case other:
                     c.send(b'Error 501 Not Implemented!')
         case other:
